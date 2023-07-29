@@ -17,17 +17,22 @@ class Node:
     grid: Grid = None
 
     @abstractmethod
-    def load(element: _Element, symmetry: list[bool], grid: Grid) -> bool:
+    def load(self, element: _Element, symmetry: list[bool], grid: Grid) -> bool:
         pass
 
     @abstractmethod
-    def reset():
+    def reset(self):
         pass
 
     @abstractmethod
-    def go() -> bool:
+    def go(self) -> bool:
         pass
 
 
 if __name__ == "__main__":
-    pass
+    import random
+
+    random.seed(1)
+    a = random.randint(0, 10000)
+    b = random.random()
+    print(a, b)

@@ -1,5 +1,6 @@
 from lxml.etree import _Element
 from rule import Rule
+from helper import Helper
 
 
 class Grid:
@@ -19,6 +20,8 @@ class Grid:
 
         self.transparent = None
         self.state = []
+        """当前状态的颜色索引"""
+
         self.state_buffer = []
         self.mask = []
         self.folder = None
@@ -40,18 +43,20 @@ class Grid:
             self.characters.append(symbol)
             self.values[symbol] = i
             self.waves[symbol] = 1 << i
-        transparent_str = element.get("transparent")
-        if transparent_str is not None:
-            self.transparent = self.wave(transparent_str)
-        unions = element.xpath(
-            ".//*[self::markov or self::sequence or self::union]//union")
         self.waves["*"] = (1 << self.c) - 1
+        # unions = element.xpath(
+        #     "//*[self::markov or self::sequence or self::union]/union")
+        unions = [x for x in Helper.descendants(
+            element, "markov | sequence | union") if x.tag == "union"]
         for union in unions:
             symbol = union.get("symbol")
             if symbol in self.waves:
                 raise Exception(f"repeating union type \"{symbol}\"")
             w = self.wave(union.get("values"))
             self.waves[symbol] = w
+        transparent_str = element.get("transparent")
+        if transparent_str is not None:
+            self.transparent = self.wave(transparent_str)
         self.folder = element.get("folder")
 
     def clear(self):
@@ -65,9 +70,10 @@ class Grid:
         return sum
 
     def matches(self, rule: Rule, x, y, z) -> bool:
-        dz, dy, dx = 0, 0, 0
+        """判断规则的输入pattern是否与此网格中的给定位置匹配。该位置必须使得整个输入pattern都在界内。"""
+        dx = dy = dz = 0
         for item in rule.input:
-            if (item & (1 << self.state[x + dx + (y + dy) * self.mx + (z + dz) * self.mx * self.my])) == 0:
+            if (item & 1 << self.state[x + dx + (y + dy) * self.mx + (z + dz) * self.mx * self.my]) == 0:
                 return False
             dx += 1
             if dx == rule.imx:
@@ -76,9 +82,49 @@ class Grid:
                 if dy == rule.imy:
                     dy = 0
                     dz += 1
+
         return True
 
 
 if __name__ == "__main__":
-    a = [1, 2, 3, 4]
-    print()
+    from lxml import etree
+    xml_str = """
+    <sequence values="BRGWA" origin="True">
+        <union symbol="?" values="WA"/>
+        <markov>
+            <one in="RBB" out="GGR"/>
+            <one in="RGG" out="WAR"/>
+            <union symbol="?" values="WA"/>
+        </markov>
+        <one comment="put a start far from the end">
+            <union symbol="?" values="WA"/>
+        </one>
+        <one in="R" out="W"/>
+        <one in="WBW" out="WAW" steps="1"/>
+        <all in="BBB/B?B" out="***/*B*"/>
+        <all in="A" out="W"/>
+    </sequence>
+    """
+    # xml_str = """
+    # <root>
+    #     <markov>Node 1</markov>
+    #     <sequence>Node 2</sequence>
+    #     <other>Node 3</other>
+    #     <union>
+    #         <markov>Node 4</markov>
+    #         <sequence>Node 5</sequence>
+    #     </union>
+    #     <sequence>Node 6</sequence>
+    #     <union>
+    #         <other>Node 7</other>
+    #         <markov>Node 8</markov>
+    #     </union>
+    # </root>
+    # """
+    root = etree.fromstring(xml_str)
+    # selected_nodes = root.xpath(
+    #     "//markov/union | //sequence/union | //union/union")
+    selected_nodes = root.xpath(
+        "//*[self::markov or self::sequence or self::union]/union")
+    for node in selected_nodes:
+        print(node.tag)

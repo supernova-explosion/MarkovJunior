@@ -1,15 +1,15 @@
 from __future__ import annotations
 import math
-import random
 import numpy as np
-from lxml.etree import _Element
 from rule_node import RuleNode
 from field import Field
 from observation import Observation
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
+    from lxml.etree import _Element
     from grid import Grid
     from rule import Rule
+    from random import Random
 
 
 class OneNode(RuleNode):
@@ -21,8 +21,6 @@ class OneNode(RuleNode):
         if not super().load(element, parent_symmetry, grid):
             return False
         self.matches = []
-        self.match_mask = np.full(
-            (len(self.rules), len(self.grid.state)), False)
         return True
 
     def reset(self):
@@ -34,7 +32,6 @@ class OneNode(RuleNode):
     def apply(self, rule: Rule, x, y, z):
         """在网格中的位置(x, y, z)处应用规则，该位置必须使得整个输出模式都在边界内。"""
         mx, my = self.grid.mx, self.grid.my
-        changes = self.ip.changes
         for dz in range(rule.omz):
             for dy in range(rule.omy):
                 for dx in range(rule.omx):
@@ -48,7 +45,7 @@ class OneNode(RuleNode):
                         old_value = self.grid.state[si]
                         if new_value != old_value:
                             self.grid.state[si] = new_value
-                            changes.append((sx, sy, sz))
+                            self.ip.changes.append((sx, sy, sz))
 
     def go(self) -> bool:
         print("OneNode go")
@@ -62,7 +59,7 @@ class OneNode(RuleNode):
                 self.grid.state)]
             self.counter += 1
             return True
-        r, x, y, z = self.random_match()
+        r, x, y, z = self.random_match(self.ip.random)
         if r < 0:
             return False
         else:
@@ -71,7 +68,7 @@ class OneNode(RuleNode):
             self.counter += 1
             return True
 
-    def random_match(self):
+    def random_match(self, random: Random):
         if self.potentials is not None:
             if self.observations is not None and Observation.is_goal_reached(self.grid.state, self.future):
                 self.future_computed = False
@@ -93,21 +90,22 @@ class OneNode(RuleNode):
                     heuristic = Field.delta_pointwise(
                         self.grid.state, self.rules[r], x, y, z, self.fields, self.potentials, self.grid.mx, self.grid.my)
                     if heuristic is None:
+                        k += 1
                         continue
                     if not first_heuristic_computed:
                         first_heuristic = heuristic
                         first_heuristic_computed = True
                     u = random.random()
-                key = u ** math.exp((heuristic - first_heuristic) /
-                                    self.temperature) if self.temperature > 0 else 0.001 * u - heuristic
-                if key > max:
-                    max = key
-                    argmax = k
+                    key = u ** math.exp((heuristic - first_heuristic) //
+                                        self.temperature) if self.temperature > 0 else 0.001 * u - heuristic
+                    if key > max:
+                        max = key
+                        argmax = k
                 k += 1
             return self.matches[argmax] if argmax >= 0 else (-1, -1, -1, -1)
         else:
             while self.match_count > 0:
-                match_index = random.randint(0, self.match_count)
+                match_index = random.randrange(0, self.match_count)
                 r, x, y, z = self.matches[match_index]
                 i = x + y * self.grid.mx + z * self.grid.mx * self.grid.my
                 self.match_mask[r, i] = False
@@ -119,9 +117,9 @@ class OneNode(RuleNode):
 
 
 if __name__ == "__main__":
-    random.seed(2)
-    print(random.random())
-    print(random.random())
-    random.seed(2)
-    print(random.randint(0, 99999))
-    print(random.randint(0, 99999))
+    w = 30
+    for i in range(10):
+        print(w)
+        if w & 1 == 1:
+            print(i, w)
+        w >>= 1

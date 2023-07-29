@@ -3,6 +3,11 @@
   <one in="RW" out="UR"/>
 </markov>
 
+<!-- <sequence values="BRWU" origin="True">
+  <one in="RB" out="WR"/>
+  <one in="RW" out="UR"/>
+</sequence> -->
+
 <!--
 Generates connected cave systems with pools.
 -->

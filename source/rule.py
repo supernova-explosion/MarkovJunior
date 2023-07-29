@@ -1,6 +1,5 @@
 from __future__ import annotations
 import copy
-from lxml.etree import _Element
 from graphic import Graphic
 from helper import Helper
 from symmetry_helper import SymmetryHelper
@@ -8,12 +7,16 @@ from array_helper import ArrayHelper
 from vox_helper import VoxHelper
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
+    from lxml.etree import _Element
     from grid import Grid
 
 
 class Rule:
 
-    def __init__(self, input: list[int], imx, imy, imz, output: list[int], omx, omy, omz, c, p) -> None:
+    def __init__(self, input: list[int], imx, imy, imz, output: list[int], omx, omy, omz, c, p, in_str=None, out_str=None) -> None:
+        self.in_str = in_str
+        self.out_str = out_str
+
         self.input = input
         """input pattern，颜色位掩码数组"""
 
@@ -34,12 +37,17 @@ class Rule:
         for z in range(imz):
             for y in range(imy):
                 for x in range(imx):
+                    # 颜色bitmask
                     w = input[x + y * imx + z * imx * imy]
                     for i in range(c):
+                        # 这么做可以包含通配符
                         if w & 1 == 1:
+                            # 如果右移i次恢复成1，则说明这个颜色是全局颜色中的第i个颜色，因为bitmask是1左移i次得到的
                             lists[i].append((x, y, z))
                         w >>= 1
         self.ishifts = copy.deepcopy(lists)
+        """输入pattern中每种颜色在全局颜色中的空间位置，ishifts[i] 包含 (x, y, z)"""
+
         if omx == imx and omy == imy and omz == imz:
             list(map(list.clear, lists))
             for z in range(omz):
@@ -53,19 +61,19 @@ class Rule:
                                 lists[i].append((x, y, z))
             self.oshifts = copy.deepcopy(lists)
         wildcard = (1 << c) - 1
-        binput = []
+        self.binput = []
         for w in input:
             w = 255 if w == wildcard else Rule.first_non_zero_position(w)
-            binput.append(w)
+            self.binput.append(w)
 
     def __members(self):
-        return (frozenset(self.input), self.imx, self.imy, self.imz, frozenset(self.output), self.omz, self.omy, self.omz)
+        return (str(self.input), self.imx, self.imy, self.imz, str(self.output), self.omz, self.omy, self.omz)
 
-    def __eq__(self, other: Rule):
-        return self.__members() == other.__members()
+    # def __eq__(self, other: Rule) -> bool:
+    #     return self.__members() == other.__members()
 
-    def __hash__(self):
-        return hash(self.__members())
+    # def __hash__(self):
+    #     return hash(self.__members())
 
     def z_rotated(self):
         new_input = [0] * len(self.input)
@@ -113,7 +121,14 @@ class Rule:
         return Rule(new_input, self.imx, self.imy, self.imz, new_output, self.omx, self.omy, self.omz, len(self.ishifts), self.p)
 
     def symmetries(self, symmetry, is_2d):
-        return SymmetryHelper.square_symmetries(self, lambda r: r.z_rotated(), lambda r: r.reflected(), symmetry) if is_2d else 1
+        if is_2d:
+            return SymmetryHelper.square_symmetries(self, lambda r: r.z_rotated(), lambda r: r.reflected(), __class__.same, symmetry)
+        else:
+            return SymmetryHelper.cube_symmetries(self, lambda r: r.z_rotated(), lambda r: r.y_rotated(), lambda r: r.reflected(), __class__.same, symmetry)
+
+    @staticmethod
+    def same(r1: Rule, r2: Rule) -> bool:
+        return r1.__members() == r2.__members()
 
     @staticmethod
     def load_resource(file_name, legend, is_2d):
@@ -133,6 +148,9 @@ class Rule:
 
     @staticmethod
     def parse(s: str):
+        """
+        将原始pattern表达式（包含颜色和空间标识符）解析为颜色字符列表和三维信息
+        """
         lines = [str.split("/") for str in s.split()]
         mx = len(lines[0][0])
         my = len(lines[0])
@@ -160,7 +178,7 @@ class Rule:
         def file_path(name):
             result = "resources/rules/"
             if gout.folder is not None:
-                file_path += gout.folder + "/"
+                result += gout.folder + "/"
             result += name
             result += ".png" if is_2d else ".vox"
             return result
@@ -183,7 +201,7 @@ class Rule:
             if in_rect is None:
                 print(f" in input at line {line_number}")
                 return None
-            out_rect, omx, omy, omz = Rule.parse(out_str) if in_str is not None else Rule.load_resource(
+            out_rect, omx, omy, omz = Rule.parse(out_str) if out_str is not None else Rule.load_resource(
                 file_path(fout_str), legend, is_2d)
             if out_rect is None:
                 print(f" in input at line {line_number}")
@@ -203,13 +221,14 @@ class Rule:
             if fx % 2 != 0:
                 print(f"odd width {fx} in {file_str}")
                 return None
-            imx = omx = fx / 2
+            imx = omx = fx // 2
             imy = omy = fy
             imz = omz = fz
             in_rect = ArrayHelper.flat_array_3d(
-                fx / 2, fy, fz, lambda x, y, z: rect[x + y * fx + z * fx * fy])
+                fx // 2, fy, fz, lambda x, y, z: rect[x + y * fx + z * fx * fy])
             out_rect = ArrayHelper.flat_array_3d(
-                fx / 2, fy, fz, lambda x, y, z: rect[x + fx / 2 + y * fx + z * fx * fy])
+                fx // 2, fy, fz, lambda x, y, z: rect[x + fx // 2 + y * fx + z * fx * fy])
+        # 输入图案的颜色bitmask（移位操作生成的，不是0、1、2这种自然索引）
         input = []
         for c in in_rect:
             if c in gin.waves:
@@ -229,8 +248,8 @@ class Rule:
                     print(
                         f"output code {c} at line {line_number} is not found in codes")
                     return None
-        p = element.get("p", 1.0)
-        return cls(input, imx, imy, imz, output, omx, omy, omz, gin.c, p)
+        p = float(element.get("p", 1.0))
+        return cls(input, imx, imy, imz, output, omx, omy, omz, gin.c, p, in_str, out_str)
 
     @staticmethod
     def first_non_zero_position(i):
@@ -242,11 +261,5 @@ class Rule:
 
 
 if __name__ == "__main__":
-    # data, x, y, z = Graphic.load_bitmap("resources/fonts/Tamzen8x16r.png")
-    # result, count = Helper.ords(data)
-    # print(result, count)
-    a = [1, 2, 3]
-    b = a[:]
-    print(b)
-    a[0] = 2
-    print(a, b)
+    a = [1, 2]
+    print(str(a), a)

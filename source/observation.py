@@ -57,7 +57,7 @@ class Observation:
     def compute_backward_potentials(potentials: ndarray, future: list[int], mx, my, mz, rules: list[Rule]):
         for c in range(potentials.shape[0]):
             potential = potentials[c]
-            for i, f in future:
+            for i, f in enumerate(future):
                 potential[i] = 0 if (f & (1 << c)) != 0 else -1
         Observation.compute_potentials(potentials, mx, my, mz, rules, True)
 
@@ -70,7 +70,7 @@ class Observation:
                     (c, i % mx, (i % (mx * my)) // mx, i // (mx * my)))
         match_mask = np.full((len(rules), len(potentials[0])), False)
         while queue:
-            value, x, y, z = queue.pop()
+            value, x, y, z = queue.pop(0)
             i = x + y * mx + z * mx * my
             t = potentials[value, i]
             for r, rule in enumerate(rules):
@@ -109,7 +109,7 @@ class Observation:
 
     @staticmethod
     def apply_forward(rule: Rule, x, y, z, potentials: ndarray, t, mx, my, backwards, q: list):
-        a = rule.input if backwards else rule.output
+        a = rule.binput if backwards else rule.output
         for dz in range(rule.imz):
             zdz = z + dz
             for dy in range(rule.imy):

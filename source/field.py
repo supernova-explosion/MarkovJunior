@@ -1,8 +1,8 @@
 from __future__ import annotations
 from numpy import ndarray
-from lxml.etree import _Element
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
+    from lxml.etree import _Element
     from rule import Rule
     from grid import Grid
 
@@ -10,12 +10,14 @@ if TYPE_CHECKING:
 class Field:
 
     def __init__(self, element: _Element, grid: Grid) -> None:
+
         self.inversed = False
         """如果为True，则计算grid state的分数时，distance字段的符号将被反转"""
 
-        self.recompute = element.get("recompute", False)
-        self.essential = element.get("essential", False)
+        self.recompute = bool(element.get("recompute", False))
+        self.essential = bool(element.get("essential", False))
         on = element.get("on")
+
         self.substrate = grid.wave(on)
         """势场的底色bitmask"""
 
@@ -24,6 +26,7 @@ class Field:
             self.inversed = True
         else:
             zero_symbols = element.get("to")
+
         self.zero = grid.wave(zero_symbols)
         """势场中零点的颜色bitmask，potentials是经过substrate单元格到zero的最短路径"""
 
@@ -31,8 +34,8 @@ class Field:
         mx, my, mz = grid.mx, grid.my, grid.mz
         front = []
         ix = iy = iz = 0
-        for i, value in grid.state:
-            potential[i] -= 1
+        for i, value in enumerate(grid.state):
+            potential[i] = -1
             if (self.zero & 1 << value) != 0:
                 potential[i] = 0
                 front.append((0, ix, iy, iz))
@@ -46,8 +49,8 @@ class Field:
         if not front:
             return False
         while front:
-            t, x, y, z = front.pop()
-            neighbors = Field.neighbors(x, y, z, mx, my, mz)
+            t, x, y, z = front.pop(0)
+            neighbors = __class__.neighbors(x, y, z, mx, my, mz)
             for nx, ny, nz in neighbors:
                 i = nx + ny * mx + nz * mx * my
                 v = grid.state[i]
@@ -61,15 +64,15 @@ class Field:
         result = []
         if x > 0:
             result.append((x - 1, y, z))
-        if x < (mx - 1):
+        if x < mx - 1:
             result.append((x + 1, y, z))
         if y > 0:
             result.append((x, y - 1, z))
-        if y < (my - 1):
+        if y < my - 1:
             result.append(((x, y + 1, z)))
         if z > 0:
             result.append((x, y, z - 1))
-        if z < (mz - 1):
+        if z < mz - 1:
             result.append((x, y, z + 1))
         return result
 

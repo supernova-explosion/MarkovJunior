@@ -7,16 +7,19 @@ from observation import Observation
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from rule import Rule
+    from random import Random
 
 
 class Search:
 
     @staticmethod
-    def run(present: list[int], future: list[int], rules: list[Rule], mx, my, mz, c, all, limit, depth_coefficient) -> list[Board]:
+    def run(present: list[int], future: list[int], rules: list[Rule], mx, my, mz, c, node, limit, depth_coefficient, seed) -> list[Board]:
         """
         尝试找到网格状态的轨迹，从当前状态开始，到匹配未来状态结束。轨迹中的每个状态都是将给定规则之一应用于前一个状态的结果。
         轨迹为网格状态列表，如果未找到轨迹则为None，当前状态不包含在轨迹中。
         """
+        from all_node import AllNode
+        is_all_node = isinstance(node, AllNode)
         bpotentials = np.full((c, len(present)), -1)
         fpotentials = np.full((c, len(present)), -1)
         Observation.compute_backward_potentials(
@@ -39,12 +42,13 @@ class Search:
         database = [root_board]
         visited = {tuple(present): 0}
         frontier = PriorityQueue()
-        frontier.put((root_board.rank(depth_coefficient), 0))
+        local_random = random.Random(seed)
+        frontier.put((root_board.rank(local_random, depth_coefficient), 0))
         record = root_backward_estimate + root_forward_estimate
         while frontier and (limit < 0 or len(database) < limit):
             _, parent_index = frontier.get()
             parent_board = database[parent_index]
-            children = Search.all_child_states(parent_board.state, mx, my, rules) if all else Search.one_child_states(
+            children = Search.all_child_states(parent_board.state, mx, my, rules) if is_all_node else Search.one_child_states(
                 parent_board.state, mx, my, rules)
             for child_state in children:
                 if child_state in visited:
@@ -55,7 +59,7 @@ class Search:
                         old_board.parent_index = parent_index
                         if old_board.backward_estimate >= 0 and old_board.forward_estimate >= 0:
                             frontier.put(
-                                (old_board.rank(depth_coefficient), child_index))
+                                (old_board.rank(local_random, depth_coefficient), child_index))
                 else:
                     child_backward_estimate = Observation.backward_pointwise(
                         bpotentials, child_state)
@@ -82,7 +86,7 @@ class Search:
                             print(
                                 f"found a state of record estimate {record} = {child_backward_estimate} + {child_forward_estimate}")
                             frontier.put(
-                                (child_board.rank(depth_coefficient), child_index))
+                                (child_board.rank(local_random, depth_coefficient), child_index))
         return None
 
     @staticmethod
@@ -222,7 +226,7 @@ class Board:
         self.backward_estimate = backward_estimate
         self.forward_estimate = forward_estimate
 
-    def rank(self, depth_coefficient):
+    def rank(self, random: Random, depth_coefficient):
         result = 1000 - self.depth if depth_coefficient < 0 else self.forward_estimate + \
             self.backward_estimate + 2 * depth_coefficient * self.depth
         return result + 0.0001 * random.random()

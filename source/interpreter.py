@@ -1,4 +1,7 @@
+import random
+import time
 import numpy as np
+from random import Random
 from lxml import etree
 from lxml.etree import _Element
 from grid import Grid
@@ -20,15 +23,19 @@ class Interpreter:
         self.current = None
         self.changes = []
         self.first = []
+        """Interpreter.changes 列表对应的索引列表。first[i] 是在程序执行的第 i 步之后发生的网格第一次更改的索引。"""
+
+        self.random: Random = None
         self.origin = None
         self.start_grid = None
-        self.grid = None
+        self.grid: Grid = None
         self.load(file_name, mx, my, mz)
 
     def load(self, file_name, mx, my, mz):
         element: _Element = etree.parse(file_name).getroot()
         self.origin = element.get("origin", False)
-        self.start_grid = Grid(element, mx, my, mz)
+        self.grid = Grid(element, mx, my, mz)
+        self.start_grid = self.grid
         symmetry_str = element.get("symmetry")
         is_2d = self.start_grid.mz == 1
         symmetry = SymmetryHelper.get_symmetry(
@@ -37,13 +44,12 @@ class Interpreter:
             raise Exception(
                 f"unknown symmetry \"{symmetry_str}\" at line {element.sourceline}")
         top_node = NodeFactory.factory(
-            element, symmetry, self, self.start_grid)
-        # self.root = Brunch(top_node) if isinstance(
-        #     top_node, Brunch) else MarkovNode.get_instance(top_node, self)
+            element, symmetry, self, self.grid)
         self.root = top_node if isinstance(
             top_node, Branch) else MarkovNode.get_instance(top_node, self)
 
-    def run(self, steps, gif):
+    def run(self, seed, steps, gif):
+        self.random = random.Random(seed)
         self.grid = self.start_grid
         self.grid.clear()
         if self.origin:
@@ -57,10 +63,12 @@ class Interpreter:
         self.gif = gif
         self.counter = 0
         while self.current is not None and (steps <= 0 or self.counter < steps):
+            print(f"[{self.counter}]")
             if gif:
-                print(f"[{self.counter}]")
                 yield self.grid.state, self.grid.characters, self.grid.mx, self.grid.my, self.grid.mz
+            start = time.time()
             self.current.go()
+            print(f"self.current.go() = {time.time() - start} s")
             self.counter += 1
             self.first.append(len(self.changes))
         yield self.grid.state, self.grid.characters, self.grid.mx, self.grid.my, self.grid.mz

@@ -50,5 +50,6 @@ class Graphic:
 
 if __name__ == "__main__":
     # print(Graphic.render(1, 1, 1, 1, 1, 1, 1))
-    data, x, y, z = Graphic.load_bitmap("resources/fonts/Tamzen8x16r.png")
+    data, x, y, z = Graphic.load_bitmap("resources/samples/Maze.png")
     print(data)
+    print(0xffffffff)

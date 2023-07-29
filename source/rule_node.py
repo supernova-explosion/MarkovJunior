@@ -1,18 +1,16 @@
 from __future__ import annotations
-import random
 import numpy as np
 from numpy import ndarray
-from lxml.etree import _Element
 from node import Node
 from rule import Rule
 from field import Field
 from search import Search
-from all_node import AllNode
 from observation import Observation
 from symmetry_helper import SymmetryHelper
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from grid import Grid
+    from lxml.etree import _Element
 
 
 class RuleNode(Node):
@@ -20,8 +18,8 @@ class RuleNode(Node):
     def __init__(self) -> None:
         self.rules: list[Rule] = []
         self.last = []
-        self.fields: list[Field] = []
-        self.observations = []
+        self.fields: list[Field] = None
+        self.observations = None
         self.search = False
         self.limit = 0
         self.depth_coefficient = 0.0
@@ -30,6 +28,7 @@ class RuleNode(Node):
         """是否已计算由该节点的observations确定的轨迹或向后电位。如果没有observations，则该标志无关紧要。"""
 
         self.last_matched_turn = 0
+        """上次匹配的轮次，用于跟踪应重新扫描网格中的更改以查找匹配项。如果自上次全网格扫描以来该节点已重置，则 last_matched_turn 为 -1"""
 
         self.counter = 0
         """此节点已执行的次数(重置会刷新)"""
@@ -69,17 +68,20 @@ class RuleNode(Node):
         """通过搜索找到的状态列表。当执行该节点时，轨迹中预先计算的状态将被复制到网格中，而不是像平常一样应用重写规则"""
 
     def load(self, element: _Element, parent_symmetry: list[bool], grid: Grid) -> bool:
+        # print("RuleNode load")
         symmetry_str = element.get("symmetry")
         symmetry = SymmetryHelper.get_symmetry(
             grid.mz == 1, symmetry_str, parent_symmetry)
         if symmetry is None:
-            print(f"unknown symmetry \"{symmetry_str}\"")
+            print(
+                f"unknown symmetry \"{symmetry_str}\" at line {element.sourceline}")
             return False
         xrules = element.findall("rule")
         rule_elements = xrules if xrules else [element]
         for rule_element in rule_elements:
-            rule = Rule.load(element, grid, grid)
+            rule = Rule.load(rule_element, grid, grid)
             if rule is None:
+                print(f"rule is none at line {rule_element.sourceline}")
                 return False
             rule.original = True
             is_2d = grid.mz == 1
@@ -93,8 +95,10 @@ class RuleNode(Node):
             for r in rule.symmetries(rule_symmetry, is_2d):
                 self.rules.append(r)
         self.last = [False] * len(self.rules)
-        self.steps = element.get("steps", 0)
-        self.temperature = element.get("temperature", 0.0)
+        self.steps = int(element.get("steps", 0))
+        self.temperature = float(element.get("temperature", 0.0))
+        self.match_mask = np.full(
+            (len(self.rules), len(self.grid.state)), False)
         color_count = grid.c
         state_length = len(grid.state)
         field_elements: list[_Element] = element.findall("field")
@@ -117,10 +121,11 @@ class RuleNode(Node):
                 index = grid.values[value]
                 self.observations[index] = Observation(
                     x.get("from", value), x.get("to"), grid)
-            self.search = element.get("search", False)
+            self.search = bool(element.get("search", False))
             if self.search:
-                self.limit = element.get("limit", -1)
-                self.depth_coefficient = element.get("depthCoefficient", 0.5)
+                self.limit = int(element.get("limit", -1))
+                self.depth_coefficient = float(
+                    element.get("depthCoefficient", 0.5))
             else:
                 self.potentials = np.zeros((color_count, state_length))
             self.future = [0] * state_length
@@ -133,7 +138,7 @@ class RuleNode(Node):
         self.last = [False] * len(self.last)
 
     def add(self, r, x, y, z, maskr: ndarray):
-        """当grid匹配到此节点中的rule时，会调用此方法"""
+        """当grid与rule匹配时，会调用此方法，各个rule之间的mask相互独立"""
         maskr[x + y * self.grid.mx + z * self.grid.mx * self.grid.my] = True
         match = (r, x, y, z)
         if self.match_count < len(self.matches):
@@ -158,10 +163,8 @@ class RuleNode(Node):
                     tries = 1 if self.limit < 0 else 20
                     k = 0
                     while k < tries and self.trajectory is None:
-                        seed = random.random()
-                        random.seed(seed)
                         self.trajectory = Search.run(
-                            self.grid.state, self.future, self.rules, self.grid.mx, self.grid.my, self.grid.mz, isinstance(self, AllNode), self.limit, self.depth_coefficient)
+                            self.grid.state, self.future, self.rules, self.grid.mx, self.grid.my, self.grid.mz, self, self.limit, self.depth_coefficient, self.ip.random.random())
                         k += 1
                     if self.trajectory is None:
                         print("search returned none")
@@ -179,9 +182,11 @@ class RuleNode(Node):
                         sx = x - shiftx
                         sy = y - shifty
                         sz = z - shiftz
+                        # 边界情况
                         if sx < 0 or sy < 0 or sz < 0 or (sx + rule.imx) > mx or (sy + rule.imy) > my or (sz + rule.imz) > mz:
                             continue
                         si = sx + sy * mx + sz * mx * my
+                        # maskr避免重复添加相同位置
                         if not maskr[si] and self.grid.matches(rule, sx, sy, sz):
                             self.add(r, sx, sy, sz, maskr)
         else:
@@ -197,6 +202,7 @@ class RuleNode(Node):
                                 sx = x - shiftx
                                 sy = y - shifty
                                 sz = z - shiftz
+                                # 边界情况
                                 if sx < 0 or sy < 0 or sz < 0 or (sx + rule.imx) > mx or (sy + rule.imy) > my or (sz + rule.imz) > mz:
                                     continue
                                 if self.grid.matches(rule, sx, sy, sz):
@@ -205,7 +211,7 @@ class RuleNode(Node):
             any_success = any_computation = False
             for c, field in enumerate(self.fields):
                 if field is not None and (self.counter == 0 or field.recompute):
-                    success = field.compute(self.potentials[c])
+                    success = field.compute(self.potentials[c], self.grid)
                     if not success and field.essential:
                         return False
                     any_success |= success
@@ -217,5 +223,3 @@ class RuleNode(Node):
 
 if __name__ == "__main__":
     a = [1, 2, 3, 4]
-    b = np.reshape(a, (2, 2))
-    print(b)

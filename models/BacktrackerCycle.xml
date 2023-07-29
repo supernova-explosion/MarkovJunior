@@ -3,7 +3,6 @@
   <markov>
     <one in="RBB" out="GGR"/>
     <one in="RGG" out="WAR"/>
-    <map symbol="?" values="WA"/>
   </markov>
   <one in="R" out="W"/>
   <one in="WBW" out="WAW" steps="1"/>
