@@ -4,10 +4,10 @@ import numpy as np
 from rule_node import RuleNode
 from field import Field
 from observation import Observation
+from grid import Grid
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from lxml.etree import _Element
-    from grid import Grid
     from rule import Rule
     from random import Random
 
@@ -48,7 +48,7 @@ class OneNode(RuleNode):
                             self.ip.changes.append((sx, sy, sz))
 
     def go(self) -> bool:
-        print("OneNode go")
+        # print("OneNode go")
         if not super().go():
             return False
         self.last_matched_turn = self.ip.counter
@@ -117,9 +117,6 @@ class OneNode(RuleNode):
 
 
 if __name__ == "__main__":
-    w = 30
-    for i in range(10):
-        print(w)
-        if w & 1 == 1:
-            print(i, w)
-        w >>= 1
+    a = 5
+    b = a & 2
+    print(a, b)

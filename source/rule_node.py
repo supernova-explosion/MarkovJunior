@@ -1,5 +1,7 @@
 from __future__ import annotations
+import time
 import numpy as np
+from lxml import etree
 from numpy import ndarray
 from node import Node
 from rule import Rule
@@ -7,9 +9,9 @@ from field import Field
 from search import Search
 from observation import Observation
 from symmetry_helper import SymmetryHelper
+from grid import Grid
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from grid import Grid
     from lxml.etree import _Element
 
 
@@ -148,7 +150,7 @@ class RuleNode(Node):
         self.match_count += 1
 
     def go(self) -> bool:
-        print("RuleNode go")
+        # print("RuleNode go")
         self.last = [False] * len(self.last)
         if self.steps > 0 and self.counter >= self.steps:
             return False

@@ -93,6 +93,11 @@ class SymmetryHelper:
         return result
 
     @staticmethod
+    def process_task(result, i, v, same, subgroup):
+        if (subgroup is None or subgroup[i]) and not list(filter(lambda s: same(s, v), result)):
+            result.append(v)
+
+    @staticmethod
     def get_symmetry(is_2d, s, default) -> list[bool]:
         if s is None:
             return default

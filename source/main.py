@@ -31,6 +31,8 @@ def delete_files(folder_path):
 def flat_index_to_2d_index(flat_index, num_cols):
     row_index = flat_index // num_cols
     col_index = flat_index % num_cols
+    if num_cols < 2:
+        return flat_index
     return row_index, col_index
 
 
@@ -59,7 +61,6 @@ if __name__ == "__main__":
             # continue
 
         amount = int(model.get("amount", 1))
-        amount = 4
         pixel_size = int(model.get("pixelsize", 4))
         seeds_str = model.get("seeds")
         seeds = [] if seeds_str is None else list(map(int, seeds.split()))
@@ -76,11 +77,10 @@ if __name__ == "__main__":
             fig, axes = plt.subplots(nrows=1, ncols=(
                 amount), num=name, subplot_kw={"projection": "3d"})
         else:
-            row = 2
+            row = 1
             col = amount // row
             fig, axes = plt.subplots(
                 nrows=row, ncols=col, num=name, subplot_kw={"projection": "3d"})
-            print("len(axes)", len(axes))
             fig.set_size_inches(12, 7)
             # fig = plt.figure()
             # axe = fig.add_subplot(projection="3d")
@@ -99,9 +99,13 @@ if __name__ == "__main__":
                 else:
                     image = np.reshape(result, (fx, fy, fz, 3))
                     u = np.transpose(image, axes=(2, 1, 0, 3))
-                    axes[flat_index_to_2d_index(k, col)].voxels((u[:, :, :, 2] > 0.1),
-                                                                facecolors=np.clip(u[:, :, :, :4], 0, 1))
+                    if amount == 1:
+                        axes.voxels((u[:, :, :, 2] > 0.1),
+                                    facecolors=np.clip(u[:, :, :, :4], 0, 1))
+                    else:
+                        axes[flat_index_to_2d_index(k, col)].voxels((u[:, :, :, 2] > 0.1),
+                                                                    facecolors=np.clip(u[:, :, :, :4], 0, 1))
                     fig.canvas.draw()
                 plt.pause(0.01)
-    print(f"Execute Time: {round(time.time() - start, 2)} s")
+    print(f"Execute Time: {round(time.time() - start, 2)}s")
     plt.show()

@@ -66,9 +66,10 @@ class Interpreter:
             print(f"[{self.counter}]")
             if gif:
                 yield self.grid.state, self.grid.characters, self.grid.mx, self.grid.my, self.grid.mz
-            start = time.time()
+            start1 = time.time()
             self.current.go()
-            print(f"self.current.go() = {time.time() - start} s")
+            start2 = time.time()
+            print(f"self.current.go() = {round(start2 - start1, 3)}s")
             self.counter += 1
             self.first.append(len(self.changes))
         yield self.grid.state, self.grid.characters, self.grid.mx, self.grid.my, self.grid.mz

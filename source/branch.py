@@ -1,4 +1,5 @@
 from __future__ import annotations
+import time
 from lxml import etree
 from grid import Grid
 from symmetry_helper import SymmetryHelper
@@ -26,7 +27,7 @@ class Branch(Node):
         from wfc_node import WFCNode
         from node_factory import NodeFactory
 
-        print("Branch load", element)
+        # print("Branch load", element)
         symmetry_str = element.get("symmetry")
         symmetry = SymmetryHelper.get_symmetry(
             self.ip.grid.mz == 1, symmetry_str, parent_symmetry)
@@ -41,10 +42,11 @@ class Branch(Node):
                 child.parent = None if isinstance(
                     child, (MapNode, WFCNode)) else self
             self.nodes.append(child)
+        # print(f"Branch load time = {time.time() - start} s", element)
         return True
 
     def go(self) -> bool:
-        print("Branch go")
+        # print("Branch go")
         # go返回True，则n不变，下次循环继续执行同一个node
         # go返回False，则n + 1，开始执行下一个节点
         while self.n < len(self.nodes):
@@ -86,7 +88,7 @@ class MarkovNode(Branch):
         return node
 
     def go(self) -> bool:
-        print("MarkovNode go")
+        # print("MarkovNode go")
         self.n = 0
         return super().go()
 

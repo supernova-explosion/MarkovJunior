@@ -1,5 +1,4 @@
 from __future__ import annotations
-import copy
 from graphic import Graphic
 from helper import Helper
 from symmetry_helper import SymmetryHelper
@@ -31,9 +30,9 @@ class Rule:
         self.omz = omz
         self.p = p
         self.original = False
-        lists = []
+        ishifts = []
         for i in range(c):
-            lists.append([])
+            ishifts.append([])
         for z in range(imz):
             for y in range(imy):
                 for x in range(imx):
@@ -43,23 +42,25 @@ class Rule:
                         # 这么做可以包含通配符
                         if w & 1 == 1:
                             # 如果右移i次恢复成1，则说明这个颜色是全局颜色中的第i个颜色，因为bitmask是1左移i次得到的
-                            lists[i].append((x, y, z))
+                            ishifts[i].append((x, y, z))
                         w >>= 1
-        self.ishifts = copy.deepcopy(lists)
+        self.ishifts = ishifts
         """输入pattern中每种颜色在全局颜色中的空间位置，ishifts[i] 包含 (x, y, z)"""
 
         if omx == imx and omy == imy and omz == imz:
-            list(map(list.clear, lists))
+            oshifts = []
+            for i in range(c):
+                oshifts.append([])
             for z in range(omz):
                 for y in range(omy):
                     for x in range(omx):
                         o = output[x + y * omx + z * omx * omy]
                         if o != 255:
-                            lists[o].append((x, y, z))
+                            oshifts[o].append((x, y, z))
                         else:
                             for i in range(c):
-                                lists[i].append((x, y, z))
-            self.oshifts = copy.deepcopy(lists)
+                                oshifts[i].append((x, y, z))
+            self.oshifts = oshifts
         wildcard = (1 << c) - 1
         self.binput = []
         for w in input:

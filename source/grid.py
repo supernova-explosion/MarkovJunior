@@ -1,3 +1,4 @@
+from numba import njit
 from lxml.etree import _Element
 from rule import Rule
 from helper import Helper
@@ -82,49 +83,42 @@ class Grid:
                 if dy == rule.imy:
                     dy = 0
                     dz += 1
-
         return True
 
 
 if __name__ == "__main__":
-    from lxml import etree
-    xml_str = """
-    <sequence values="BRGWA" origin="True">
-        <union symbol="?" values="WA"/>
-        <markov>
-            <one in="RBB" out="GGR"/>
-            <one in="RGG" out="WAR"/>
-            <union symbol="?" values="WA"/>
-        </markov>
-        <one comment="put a start far from the end">
-            <union symbol="?" values="WA"/>
-        </one>
-        <one in="R" out="W"/>
-        <one in="WBW" out="WAW" steps="1"/>
-        <all in="BBB/B?B" out="***/*B*"/>
-        <all in="A" out="W"/>
-    </sequence>
-    """
+
+    def wave(values):
+        """将颜色字符串解析为bitmask"""
+        sum = 0
+        for v in values:
+            sum += 1 << v
+        return sum
+
+    print(wave((1, 3, 5)) & 1 << 4)
+
+    # from lxml import etree
     # xml_str = """
-    # <root>
-    #     <markov>Node 1</markov>
-    #     <sequence>Node 2</sequence>
-    #     <other>Node 3</other>
-    #     <union>
-    #         <markov>Node 4</markov>
-    #         <sequence>Node 5</sequence>
-    #     </union>
-    #     <sequence>Node 6</sequence>
-    #     <union>
-    #         <other>Node 7</other>
-    #         <markov>Node 8</markov>
-    #     </union>
-    # </root>
+    # <sequence values="BRGWA" origin="True">
+    #     <union symbol="?" values="WA"/>
+    #     <markov>
+    #         <one in="RBB" out="GGR"/>
+    #         <one in="RGG" out="WAR"/>
+    #         <union symbol="?" values="WA"/>
+    #     </markov>
+    #     <one comment="put a start far from the end">
+    #         <union symbol="?" values="WA"/>
+    #     </one>
+    #     <one in="R" out="W"/>
+    #     <one in="WBW" out="WAW" steps="1"/>
+    #     <all in="BBB/B?B" out="***/*B*"/>
+    #     <all in="A" out="W"/>
+    # </sequence>
     # """
-    root = etree.fromstring(xml_str)
+    # root = etree.fromstring(xml_str)
+    # # selected_nodes = root.xpath(
+    # #     "//markov/union | //sequence/union | //union/union")
     # selected_nodes = root.xpath(
-    #     "//markov/union | //sequence/union | //union/union")
-    selected_nodes = root.xpath(
-        "//*[self::markov or self::sequence or self::union]/union")
-    for node in selected_nodes:
-        print(node.tag)
+    #     "//*[self::markov or self::sequence or self::union]/union")
+    # for node in selected_nodes:
+    #     print(node.tag)

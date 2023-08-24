@@ -1,13 +1,13 @@
 <models>
-  <model name="Apartemazements" size="7" d="3" amount="1"/>
+  <!-- <model name="Apartemazements" size="7" d="3" amount="1"/> -->
   <!-- <model name="Apartemazements" size="8" d="3" iso="True" pixelsize="6" gui="150"/> -->
   <!-- <model name="CarmaTower" length="12" width="12" height="18"/> -->
-  <!-- <model name="CarmaTower" length="6" width="6" height="8"/> -->
+  <!-- <model name="CarmaTower" length="8" width="8" height="8"/> -->
   <!-- <model name="CarmaTower" length="12" width="12" height="18" iso="True" amount="1"/> -->
   <!-- <model name="ModernHouse" length="9" width="9" height="4" amount="1"/> -->
-  <!-- <model name="ModernHouse" length="9" width="9" height="4" iso="True"/>
-  <model name="SeaVilla" length="10" width="10" height="4" amount="4"/>
-  <model name="SeaVilla" length="10" width="10" height="4" iso="True"/>
+  <!-- <model name="ModernHouse" length="9" width="9" height="4" iso="True"/> -->
+  <!-- <model name="SeaVilla" length="10" width="10" height="4" amount="1"/> -->
+  <!-- <model name="SeaVilla" length="10" width="10" height="4" iso="True"/>
   <model name="Island" size="800" steps="-1" pixelsize="1">
     <color symbol="I" value="abcbe8" comment="sea"/>
     <color symbol="U" value="cee6f9" comment="coast and lakes"/>
@@ -100,9 +100,9 @@
   <model name="MazeTrail" size="59" steps="1000"/>
   <model name="MazeTrail" size="27" d="3" steps="1000"/>
   <model name="MazesAndLakes" size="256" pixelsize="3"/>
-  <model name="MultiHeadedDungeon" size="55"/>
-  <model name="MultiHeadedWalk" size="99"/>
-  <model name="MultiHeadedWalkDungeon" size="59"/>
+  <model name="MultiHeadedDungeon" size="55"/>  -->
+  <model name="MultiHeadedWalk" size="99" gif="True"/>
+  <!-- <model name="MultiHeadedWalkDungeon" size="59"/>
   <model name="NestedGrowth" size="80" steps="100"/>
   <model name="NoDeadEnds" size="39"/>
   <model name="NoDeadEnds" size="19" d="3"/>

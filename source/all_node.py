@@ -40,7 +40,7 @@ class AllNode(RuleNode):
                         self.ip.changes.append((sx, sy, sz))
 
     def go(self) -> bool:
-        print("AllNode go")
+        # print("AllNode go")
         if not super().go():
             return False
         self.last_matched_turn = self.ip.counter

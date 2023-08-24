@@ -256,6 +256,24 @@ class TileNode(WFCNode):
 
     def update_state(self):
         r = Random()
+        start1 = time.time()
+        for z in range(self.grid.mz):
+            for y in range(self.grid.my):
+                for x in range(self.grid.mx):
+                    w = self.wave.data[x + y * self.grid.mx +
+                                       z * self.grid.mx * self.grid.my]
+                    votes = np.full(
+                        (self.SZ * self.S ** 2, self.new_grid.c), 0)
+                    for t in range(self.P):
+                        if w[t]:
+                            tile = self.tile_data[t]
+                            for dz in range(self.SZ):
+                                for dy in range(self.S):
+                                    for dx in range(self.S):
+                                        di = dx + dy * self.S + dz * self.S ** 2
+                                        votes[di, tile[di]] += 1
+        print(f"part1 time = {time.time() - start1}")
+        start2 = time.time()
         for z in range(self.grid.mz):
             for y in range(self.grid.my):
                 for x in range(self.grid.mx):
@@ -287,6 +305,7 @@ class TileNode(WFCNode):
                                 sz = z * (self.SZ - self.overlap) + dz
                                 self.new_grid.state[sx + sy * self.new_grid.mx +
                                                     sz * self.new_grid.mx * self.new_grid.my] = argmax
+        print(f"total time = {time.time() - start2}")
 
 
 if __name__ == "__main__":
